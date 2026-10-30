@@ -60,8 +60,14 @@
   }
 }
 
+/* Klar: iOS 26 clear Liquid Glass. Barely frosted, a bright bevel lit from the top left,
+   and a faint rainbow where light splits at the edge. Only for real glass, rows keep --rim. */
 :root[data-glass='klar'] {
-  --glass: #ffffff8f;
+  --glass: #ffffff4d;
+  --glass-rim: inset 1px 1px 0 #ffffffe6, inset -1px -1px 0 #ffffff8c, inset 0 0 0 0.5px #ffffff73, inset 4px 4px 10px -6px #ffffffcc,
+    inset -4px -4px 10px -6px #ffffff8c, inset 0 3px 4px -3px #ff5fa259, inset 0 -3px 4px -3px #3cc8ff59, inset 3px 0 4px -3px #ffd25a4d,
+    inset -3px 0 4px -3px #8a6bff4d;
+  --lift: 0 10px 32px -10px #15172638;
 }
 :root[data-glass='solide'] {
   --glass: #f7f9fb;
@@ -69,7 +75,11 @@
 }
 @media (prefers-color-scheme: dark) {
   :root[data-glass='klar'] {
-    --glass: #181a2c8c;
+    --glass: #2a2c3a66;
+    --glass-rim: inset 1px 1px 0 #ffffff66, inset -1px -1px 0 #ffffff33, inset 0 0 0 0.5px #ffffff2e, inset 4px 4px 10px -6px #ffffff4d,
+      inset -4px -4px 10px -6px #ffffff26, inset 0 3px 4px -3px #ff5fa240, inset 0 -3px 4px -3px #3cc8ff40, inset 3px 0 4px -3px #ffd25a33,
+      inset -3px 0 4px -3px #8a6bff33;
+    --lift: 0 10px 32px -10px #000000b3;
   }
   :root[data-glass='solide'] {
     --glass: #1a1c2e;
@@ -176,11 +186,22 @@ button {
   background: var(--glass);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   backdrop-filter: blur(24px) saturate(180%);
-  box-shadow: var(--rim), var(--lift);
+  box-shadow: var(--glass-rim, var(--rim)), var(--lift);
 }
+/* Safari ignores var() inside -webkit-backdrop-filter, so the values are written out. */
 :root[data-glass='klar'] .glass {
-  -webkit-backdrop-filter: blur(18px) saturate(180%);
-  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(7px) saturate(190%) brightness(1.06);
+  backdrop-filter: blur(7px) saturate(190%) brightness(1.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-glass='klar'] .glass {
+    -webkit-backdrop-filter: blur(7px) saturate(170%) brightness(0.8);
+    backdrop-filter: blur(7px) saturate(170%) brightness(0.8);
+  }
+}
+/* iOS 26: glass buttons swell under the finger instead of shrinking. */
+:root[data-glass='klar'] :is(.pill, .circle).glass:active:not(:disabled) {
+  scale: 1.08;
 }
 :root[data-glass='solide'] .glass {
   -webkit-backdrop-filter: none;
@@ -191,6 +212,13 @@ button {
 }
 :root[data-lens]:not([data-glass='solide']) .lens-circle {
   backdrop-filter: url(#lens-circle) blur(3px) saturate(180%);
+}
+/* Klar in Chromium: the lens bends red, green and blue apart, for the rainbow edge of iOS glass. */
+:root[data-lens][data-glass='klar'] .lens-pill {
+  backdrop-filter: url(#lens-pill-rgb) blur(1px) saturate(190%) brightness(1.06);
+}
+:root[data-lens][data-glass='klar'] .lens-circle {
+  backdrop-filter: url(#lens-circle-rgb) blur(1px) saturate(190%) brightness(1.06);
 }
 
 .faux {

@@ -55,17 +55,30 @@ export function setupLens() {
   svg.setAttribute('height', '0')
   svg.setAttribute('aria-hidden', 'true')
   svg.style.position = 'absolute'
+  const el = (name: string, attrs: Record<string, string | number>) => {
+    const e = document.createElementNS(ns, name)
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v))
+    return e
+  }
+  const displace = (scale: number, result: string) =>
+    el('feDisplacementMap', { in: 'SourceGraphic', in2: 'map', scale, xChannelSelector: 'R', yChannelSelector: 'G', result })
   for (const s of SURFACES) {
-    const filter = document.createElementNS(ns, 'filter')
-    filter.id = s.id
-    filter.setAttribute('color-interpolation-filters', 'sRGB')
-    const img = document.createElementNS(ns, 'feImage')
-    img.setAttribute('href', map(s.w, s.h, s.r))
-    for (const [k, v] of Object.entries({ x: 0, y: 0, width: s.w, height: s.h, result: 'map', preserveAspectRatio: 'none' })) img.setAttribute(k, String(v))
-    const disp = document.createElementNS(ns, 'feDisplacementMap')
-    for (const [k, v] of Object.entries({ in: 'SourceGraphic', in2: 'map', scale: 24, xChannelSelector: 'R', yChannelSelector: 'G' })) disp.setAttribute(k, String(v))
-    filter.append(img, disp)
-    svg.append(filter)
+    const href = map(s.w, s.h, s.r)
+    const image = () => el('feImage', { href, x: 0, y: 0, width: s.w, height: s.h, result: 'map', preserveAspectRatio: 'none' })
+    const filter = el('filter', { id: s.id, 'color-interpolation-filters': 'sRGB' })
+    filter.append(image(), displace(24, 'out'))
+    // Klar: each colour channel bends a little differently, like light through a real glass edge.
+    const rgb = el('filter', { id: `${s.id}-rgb`, 'color-interpolation-filters': 'sRGB' })
+    rgb.append(image())
+    const only = ['1 0 0 0 0', '0 1 0 0 0', '0 0 1 0 0']
+    ;[30, 26, 22].forEach((scale, i) => {
+      rgb.append(displace(scale, `d${i}`))
+      const keep = only.map((row, j) => (j === i ? row : '0 0 0 0 0')).join(' ') + ' 0 0 0 1 0'
+      rgb.append(el('feColorMatrix', { in: `d${i}`, type: 'matrix', values: keep, result: `c${i}` }))
+    })
+    rgb.append(el('feComposite', { in: 'c0', in2: 'c1', operator: 'arithmetic', k2: 1, k3: 1, result: 'c01' }))
+    rgb.append(el('feComposite', { in: 'c01', in2: 'c2', operator: 'arithmetic', k2: 1, k3: 1 }))
+    svg.append(filter, rgb)
   }
   document.body.prepend(svg)
   // Only now: referencing the filter before it exists flashes the surface transparent in Chromium.
