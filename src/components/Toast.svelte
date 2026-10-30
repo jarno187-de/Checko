@@ -37,15 +37,26 @@
     gap: 12px;
     max-width: 528px;
     min-height: 48px;
-    padding: 8px 8px 8px 18px;
-    border-radius: 999px;
+    padding: 12px 18px;
+    /* Half the min height: a pill on one line, a rounded card when the text wraps. */
+    border-radius: 24px;
     background: var(--disc);
     color: var(--disc-ink);
     font-weight: 560;
     pointer-events: auto;
     animation: toast-in 0.42s var(--spring-pop);
   }
+  .toast span {
+    flex: 1;
+    min-width: 0;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+  .toast:has(.action) {
+    padding: 8px 8px 8px 18px;
+  }
   .action {
+    flex: none;
     min-height: 44px;
     padding: 0 14px;
     border-radius: 999px;

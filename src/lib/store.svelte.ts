@@ -90,7 +90,8 @@ let toastTimer = 0
 export function toast(text: string, action?: { label: string; run: () => void }) {
   clearTimeout(toastTimer)
   app.toast = { text, action }
-  toastTimer = window.setTimeout(() => (app.toast = null), action ? 5000 : 3000)
+  // Long texts (Gemini's verdict) stay up long enough to read: about 60 ms per character.
+  toastTimer = window.setTimeout(() => (app.toast = null), Math.max(action ? 5000 : 3000, text.length * 60))
 }
 
 export function exportBackup() {
