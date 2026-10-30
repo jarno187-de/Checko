@@ -9,7 +9,7 @@ export default defineConfig({
     svelte(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon-180x180.png'],
+      includeAssets: ['favicon.svg', 'apple-touch-icon-180x180.png', 'apple-touch-icon-dark-180x180.png'],
       manifest: {
         name: 'Checko',
         short_name: 'Checko',
