@@ -9,7 +9,11 @@
   const dark = matchMedia('(prefers-color-scheme: dark)')
 
   $effect(() => {
-    const load = () => filmUrl(dark.matches).then((u) => (url = u))
+    const load = () =>
+      filmUrl(dark.matches).then((u) => {
+        url = u
+        document.documentElement.style.backgroundImage = `url(${u})`
+      })
     load()
     dark.addEventListener('change', load)
     return () => dark.removeEventListener('change', load)

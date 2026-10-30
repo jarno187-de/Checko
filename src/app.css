@@ -96,7 +96,9 @@ html {
   font-weight: 450;
   line-height: 1.45;
   color: var(--ink);
-  background: var(--bg);
+  /* The film again (image set by Backdrop.svelte): iOS paints this under the status bar
+     and behind the keyboard, where the fixed backdrop does not reach. */
+  background: var(--bg) center / 150vmax 150vmax no-repeat fixed;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -108,20 +110,6 @@ body {
   margin: 0;
   min-height: 100dvh;
   overscroll-behavior-y: none;
-}
-
-/* Installed on iOS the film runs under the status bar (black-translucent), whose text is always
-   white. On the light film a soft shade behind it keeps the clock readable. */
-@media (display-mode: standalone) and (prefers-color-scheme: light) {
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0 0 auto;
-    height: calc(env(safe-area-inset-top) * 1.6);
-    z-index: 30;
-    pointer-events: none;
-    background: linear-gradient(#15172647, #15172600);
-  }
 }
 
 h1,
