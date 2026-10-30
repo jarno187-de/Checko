@@ -4,7 +4,6 @@
   import { backOut, cubicOut } from 'svelte/easing'
   import { crossfade, fly } from 'svelte/transition'
   import { afterglow, finishLines, finishMessage, popEffects } from '../lib/celebrate'
-  import { angleFor } from '../lib/film'
   import { stir } from '../lib/flow'
   import { GeminiError, PROBLEM_TEXT, checkPhoto, gemini } from '../lib/gemini.svelte'
   import { buzz, iosTick } from '../lib/haptics'
@@ -115,9 +114,6 @@
   })
 
   // The room brightens with every finished task.
-  $effect(() => {
-    ui.scene.angle = angleFor(listId)
-  })
   $effect(() => {
     ui.scene.wash = total ? (0.35 * (total - openCount)) / total : 0
   })

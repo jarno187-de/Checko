@@ -26,7 +26,7 @@
   let flow: ReturnType<typeof startFlow> = null
   $effect(() => {
     if (!canvas) return
-    flow = startFlow(canvas, { dark: () => dark.matches, angle: () => ui.scene.angle, still: reduced })
+    flow = startFlow(canvas, { dark: () => dark.matches, still: reduced })
     live = !!flow
     const redraw = () => flow?.run()
     dark.addEventListener('change', redraw)
@@ -35,10 +35,9 @@
       dark.removeEventListener('change', redraw)
     }
   })
-  // Weniger Bewegung switched on or off, or a new list: restart or redraw the still frame.
+  // Weniger Bewegung switched on or off: restart, or redraw the still frame.
   $effect(() => {
     reduced()
-    void ui.scene.angle
     flow?.run()
   })
 
@@ -57,7 +56,7 @@
   <canvas class="flow" bind:this={canvas}></canvas>
   {#if !live}
     <div class="spin">
-      <div class="film" style:rotate="{ui.scene.angle}deg" style:background-image={url ? `url(${url})` : undefined}></div>
+      <div class="film" style:background-image={url ? `url(${url})` : undefined}></div>
     </div>
   {/if}
   <div class="wash" style:opacity={ui.scene.wash}></div>
@@ -100,7 +99,6 @@
       radial-gradient(35% 30% at 65% 75%, #19a9a440, transparent),
       var(--bg);
     background-size: cover;
-    transition: rotate 1.2s ease-in-out;
   }
   .wash,
   .flash {

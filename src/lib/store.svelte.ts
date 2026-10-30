@@ -29,8 +29,8 @@ export type View = 'overview' | 'list' | 'settings'
 export const ui = $state({
   view: 'overview' as View,
   listId: '',
-  /** Backdrop: film rotation, how bright the room is (0..0.35), and a counter that triggers the rinse. */
-  scene: { angle: 0, wash: 0, rinse: 0 },
+  /** Backdrop: how bright the room is (0..0.35), and a counter that triggers the rinse. */
+  scene: { wash: 0, rinse: 0 },
   /** Read out by screen readers (aria-live). */
   announce: '',
 })

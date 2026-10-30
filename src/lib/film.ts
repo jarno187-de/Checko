@@ -2,7 +2,6 @@
 // Domain-warped noise mapped onto the colour order of a draining soap film:
 // gold, magenta, violet, teal, silver. Bands ("Schlieren"), not round blobs.
 
-// Square, so the layer can rotate to any angle and still cover the screen.
 const W = 240
 const H = 240
 
@@ -85,9 +84,3 @@ function draw(p: Palette): Promise<string> {
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b ? URL.createObjectURL(b) : canvas.toDataURL()), 'image/png'))
 }
 
-/** Stable rotation per list, so every room has its own film. */
-export function angleFor(id: string): number {
-  let h = 0
-  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) | 0
-  return Math.abs(h) % 360
-}

@@ -6,24 +6,24 @@ import { LIGHT, DARK, type Palette } from './film'
 const VERT = `attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}`
 
 const FRAG = `precision mediump float;
-uniform vec2 size;uniform float t;uniform float warp;uniform float angle;
+uniform vec2 size;uniform float t;uniform float warp;
 uniform vec3 base;uniform vec3 bands[5];uniform float amount;
-float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
-float noise(vec2 p){vec2 i=floor(p),f=fract(p),u=f*f*(3.-2.*f);
-  float a=hash(i),b=hash(i+vec2(1,0)),c=hash(i+vec2(0,1)),d=hash(i+vec2(1,1));
-  return a+(b-a)*u.x+(c-a)*u.y+(a-b-c+d)*u.x*u.y;}
-float fbm(vec2 p){return .5*noise(p)+.25*noise(p*2.03)+.125*noise(p*4.01);}
+float hash(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}
+float noise(vec3 p){vec3 i=floor(p),f=fract(p),u=f*f*(3.-2.*f);
+  float a=mix(mix(hash(i),hash(i+vec3(1,0,0)),u.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),u.x),u.y);
+  float b=mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),u.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),u.x),u.y);
+  return mix(a,b,u.z);}
+float fbm(vec2 p,float z){return .5*noise(vec3(p,z))+.25*noise(vec3(p*2.03,z*1.3))+.125*noise(vec3(p*4.01,z*1.7));}
 vec3 band(float x){x=fract(x)*5.;float i=floor(x);float f=x-i;f=f*f*(3.-2.*f);
-  vec3 a=bands[0],b=bands[1];
+  vec3 a=bands[4],b=bands[0];
   if(i<.5){a=bands[0];b=bands[1];}else if(i<1.5){a=bands[1];b=bands[2];}
-  else if(i<2.5){a=bands[2];b=bands[3];}else if(i<3.5){a=bands[3];b=bands[4];}else{a=bands[4];b=bands[0];}
+  else if(i<2.5){a=bands[2];b=bands[3];}else if(i<3.5){a=bands[3];b=bands[4];}
   return mix(a,b,f);}
 void main(){
-  vec2 uv=(gl_FragCoord.xy-.5*size)/max(size.x,size.y);
-  float c=cos(angle),s=sin(angle);
-  vec2 p=mat2(c,-s,s,c)*uv*1.5+vec2(1.1,1.3);
-  vec2 q=vec2(fbm(p+vec2(.0,.0)+t*vec2(.21,.13)),fbm(p+vec2(5.2,1.3)-t*vec2(.17,.19)));
-  float r=fbm(p+warp*q+vec2(1.7,9.2)+t*vec2(.09,-.07));
+  // Time is a third noise dimension: the puddles reshape where they are, nothing slides or turns.
+  vec2 p=(gl_FragCoord.xy-.5*size)/max(size.x,size.y)*1.5+vec2(1.1,1.3);
+  vec2 q=vec2(fbm(p,t),fbm(p+vec2(5.2,1.3),t+3.1));
+  float r=fbm(p+warp*q+vec2(1.7,9.2),t*.7+7.4);
   vec3 col=band(r*2.4+q.x*.8);
   float k=amount*(.55+.45*sin(r*9.+q.y*4.));
   gl_FragColor=vec4(mix(base,col,k),1.);
@@ -39,7 +39,7 @@ export function stir(amount: number) {
 }
 
 /** Starts drawing into the canvas. Returns a cleanup, or null when WebGL is missing. */
-export function startFlow(canvas: HTMLCanvasElement, opts: { dark: () => boolean; angle: () => number; still: () => boolean }) {
+export function startFlow(canvas: HTMLCanvasElement, opts: { dark: () => boolean; still: () => boolean }) {
   const gl = canvas.getContext('webgl', { antialias: false, alpha: false, preserveDrawingBuffer: false })
   if (!gl) return null
   const shader = (type: number, src: string) => {
@@ -77,7 +77,7 @@ export function startFlow(canvas: HTMLCanvasElement, opts: { dark: () => boolean
 
   let t = 40 // start mid-flow, not at the noise origin
   let speed = 1
-  let angle = opts.angle()
+  let breath = 0
   let last = performance.now()
   let raf = 0
   let wasDark: boolean | undefined
@@ -89,14 +89,12 @@ export function startFlow(canvas: HTMLCanvasElement, opts: { dark: () => boolean
     if (dark !== wasDark) palette(dark ? DARK : LIGHT), (wasDark = dark)
     // Energy fades over ~1.5 s; speed follows it with its own lag, so a push swells in and out.
     energy *= Math.exp(-dt / 1.5)
-    speed += (1 + 6 * energy - speed) * (1 - Math.exp(-dt / 0.5))
-    t += dt * speed * 0.035
-    // A new list turns its film gently into place instead of jumping.
-    const target = (opts.angle() * Math.PI) / 180
-    angle += (target - angle) * (1 - Math.exp(-dt / 0.8))
+    speed += (1 + 3 * energy - speed) * (1 - Math.exp(-dt / 0.5))
+    t += dt * speed * 0.05
+    // Breathing: the warp swells and settles slowly, and a push makes it breathe much deeper.
+    breath += dt * (0.5 + 0.4 * (speed - 1))
     gl.uniform1f(u('t'), t)
-    gl.uniform1f(u('angle'), angle)
-    gl.uniform1f(u('warp'), 3.5 + 0.35 * (speed - 1) ** 0.7)
+    gl.uniform1f(u('warp'), 3.5 + 0.35 * Math.sin(breath) + 0.9 * (speed - 1) ** 0.8)
     gl.drawArrays(gl.TRIANGLES, 0, 3)
   }
 
