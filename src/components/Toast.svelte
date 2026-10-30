@@ -1,0 +1,61 @@
+<script lang="ts">
+  import { app } from '../lib/store.svelte'
+</script>
+
+<div class="toast-slot" role="status">
+  {#if app.toast}
+    <div class="toast">
+      <span>{app.toast.text}</span>
+      {#if app.toast.action}
+        <button
+          class="action"
+          onclick={() => {
+            app.toast?.action?.run()
+            app.toast = null
+          }}>{app.toast.action.label}</button
+        >
+      {/if}
+    </div>
+  {/if}
+</div>
+
+<style>
+  .toast-slot {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 76px);
+    display: grid;
+    place-items: center;
+    padding: 0 var(--gutter);
+    pointer-events: none;
+    z-index: 40;
+  }
+  .toast {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 528px;
+    min-height: 48px;
+    padding: 8px 8px 8px 18px;
+    border-radius: 999px;
+    background: var(--disc);
+    color: var(--disc-ink);
+    font-weight: 560;
+    pointer-events: auto;
+    animation: toast-in 0.42s var(--spring-pop);
+  }
+  .action {
+    min-height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--disc-ink) 16%, transparent);
+    font-weight: 650;
+  }
+  @keyframes toast-in {
+    from {
+      translate: 0 16px;
+      opacity: 0;
+    }
+  }
+</style>
