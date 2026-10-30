@@ -325,8 +325,12 @@ button {
 /* Sheets and dialogs: native <dialog>, glass card at the bottom. */
 dialog {
   width: min(560px, 100% - 2 * var(--gutter));
-  max-height: calc(100dvh - 32px);
-  margin: auto auto max(16px, env(safe-area-inset-bottom));
+  /* Anchored to the bottom of the visible area, so an open keyboard pushes the sheet up (see App.svelte). */
+  inset: auto 0;
+  top: calc(var(--vv-bottom, 100dvh) - max(16px, env(safe-area-inset-bottom)));
+  translate: 0 -100%;
+  max-height: calc(var(--vv-height, 100dvh) - 32px);
+  margin: 0 auto;
   padding: 20px;
   border: 0;
   border-radius: 22px;
@@ -340,7 +344,7 @@ dialog[open] {
 }
 @keyframes sheet-in {
   from {
-    translate: 0 40px;
+    translate: 0 calc(-100% + 40px);
     opacity: 0;
   }
 }

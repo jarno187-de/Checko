@@ -24,7 +24,8 @@
     position: fixed;
     left: 0;
     right: 0;
-    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 76px);
+    top: calc(var(--vv-bottom, 100dvh) - max(16px, env(safe-area-inset-bottom)) - 76px);
+    translate: 0 -100%;
     display: grid;
     place-items: center;
     padding: 0 var(--gutter);

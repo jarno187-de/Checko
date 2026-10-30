@@ -37,7 +37,9 @@
 <style>
   .backdrop {
     position: fixed;
-    inset: 0;
+    inset: 0 0 auto;
+    /* Reach down to the keyboard even when the visible area extends below the layout viewport. */
+    height: max(100%, var(--vv-bottom, 0px));
     z-index: -1;
     overflow: hidden;
     background: var(--bg);

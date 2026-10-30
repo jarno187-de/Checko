@@ -31,6 +31,24 @@
     else delete root.dataset.reduced
   })
 
+  // The keyboard covers the bottom of the layout viewport, and fixed elements stay attached to it
+  // (iOS). Expose where the visible part ends, so the composer, sheets and toasts sit above the keyboard.
+  $effect(() => {
+    const vv = visualViewport
+    if (!vv) return
+    const fit = () => {
+      root.style.setProperty('--vv-bottom', `${vv.offsetTop + vv.height}px`)
+      root.style.setProperty('--vv-height', `${vv.height}px`)
+    }
+    fit()
+    vv.addEventListener('resize', fit)
+    vv.addEventListener('scroll', fit)
+    return () => {
+      vv.removeEventListener('resize', fit)
+      vv.removeEventListener('scroll', fit)
+    }
+  })
+
   // A list that no longer exists (deleted, or a backup was loaded) falls back to the overview.
   $effect(() => {
     if (ui.view === 'list' && !app.data.lists.some((l) => l.id === ui.listId)) ui.view = 'overview'

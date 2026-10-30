@@ -65,8 +65,6 @@
   let draft = $state('')
   let input = $state<HTMLInputElement>()
   let scrolled = $state(false)
-  /** Height of the on-screen keyboard, so the composer stays above it (iOS keeps fixed elements behind it). */
-  let keyboard = $state(0)
 
   // Photo check: a task marked for it stays locked until Gemini says the photo shows it done.
   let camera = $state<HTMLInputElement>()
@@ -125,14 +123,10 @@
   })
   $effect(() => {
     const onScroll = () => (scrolled = scrollY > 8)
-    const vv = visualViewport
-    const fit = () => vv && (keyboard = Math.max(0, innerHeight - vv.height - vv.offsetTop))
     // Popped rows only move into "Erledigt" while no finger is down.
     const hold = () => clearTimeout(settleTimer)
     const rest = () => recent.size && settleSoon()
     addEventListener('scroll', onScroll, { passive: true })
-    vv?.addEventListener('resize', fit)
-    vv?.addEventListener('scroll', fit)
     addEventListener('pointerdown', hold, true)
     addEventListener('pointerup', rest, true)
     addEventListener('pointercancel', rest, true)
@@ -141,8 +135,6 @@
       removeEventListener('pointerdown', hold, true)
       removeEventListener('pointerup', rest, true)
       removeEventListener('pointercancel', rest, true)
-      vv?.removeEventListener('resize', fit)
-      vv?.removeEventListener('scroll', fit)
       timers.forEach(clearTimeout)
       clearTimeout(settleTimer)
       clearTimeout(chainTimer)
@@ -423,7 +415,7 @@
     {/if}
   {/if}
 
-  <form class="composer glass" hidden={showCard} onsubmit={add} style:bottom="calc(max(16px, env(safe-area-inset-bottom)) + {keyboard}px)">
+  <form class="composer glass" hidden={showCard} onsubmit={add}>
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
     <input bind:this={input} type="text" bind:value={draft} placeholder="Was steht an?" aria-label="Neue Aufgabe" maxlength="120" enterkeyhint="enter" />
     {#if draft.trim()}
@@ -670,8 +662,9 @@
   .composer {
     position: fixed;
     left: 50%;
-    bottom: max(16px, env(safe-area-inset-bottom));
-    translate: -50% 0;
+    /* Bottom edge of the visible area (above the keyboard), see App.svelte. */
+    top: calc(var(--vv-bottom, 100dvh) - max(16px, env(safe-area-inset-bottom)));
+    translate: -50% -100%;
     z-index: 20;
     display: flex;
     align-items: center;
