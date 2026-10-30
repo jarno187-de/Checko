@@ -14,8 +14,9 @@
     onuncheck: () => void
     onedit: () => void
     ongrip?: (e: PointerEvent) => void
+    onnudge?: (dir: -1 | 1) => void
   }
-  let { task, done, dragging = false, dy = 0, locked = false, checking = false, onlocked, onpop, onuncheck, onedit, ongrip }: Props = $props()
+  let { task, done, dragging = false, dy = 0, locked = false, checking = false, onlocked, onpop, onuncheck, onedit, ongrip, onnudge }: Props = $props()
   let progress = $state(0)
   let sprung = $state(false)
 
@@ -28,11 +29,21 @@
 
 <div class="row" class:done class:dragging data-row={task.id} style:translate={dragging ? `0 ${dy}px` : undefined}>
   <Bubble {done} title={task.title} bind:progress {locked} {checking} {onlocked} onpop={pop} {onuncheck} />
-  <button class="text" class:sprung onclick={onedit} style:font-stretch={progress ? `${100 - 10 * progress ** 0.7}%` : undefined}>
+  <button class="text" class:sprung aria-label="„{task.title}“ bearbeiten" onclick={onedit} style:font-stretch={progress ? `${100 - 10 * progress ** 0.7}%` : undefined}>
     <span class="label">{task.title}</span>
   </button>
   {#if ongrip && !done}
-    <button class="grip" aria-label="„{task.title}“ verschieben" onpointerdown={ongrip}>
+    <button
+      class="grip"
+      aria-label="„{task.title}“ verschieben, Pfeiltasten hoch und runter"
+      onpointerdown={ongrip}
+      onkeydown={(e) => {
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+          e.preventDefault()
+          onnudge?.(e.key === 'ArrowUp' ? -1 : 1)
+        }
+      }}
+    >
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14M5 12h14M5 16h14" /></svg>
     </button>
   {/if}

@@ -34,10 +34,17 @@ export function iosTick(node: HTMLElement) {
   sw.type = 'checkbox'
   sw.setAttribute('switch', '')
   sw.tabIndex = -1
-  // The label re-dispatches a click on the switch; the host must only see the first one.
+  // The label re-dispatches a click on the switch. This stops it bubbling; capture listeners
+  // on the host still see it and must skip clicks whose target is an <input>.
   sw.addEventListener('click', (e) => e.stopPropagation())
   label.addEventListener('click', (e) => {
     if (!app.data.settings.vibration) e.preventDefault()
+    // The label covers a wrapped button, so the tap never reaches it: pass it on (still inside the gesture).
+    const button = node.querySelector<HTMLElement>(':scope > button')
+    if (button) {
+      e.stopPropagation()
+      button.click()
+    }
   })
   label.append(sw)
   node.append(label)

@@ -22,6 +22,8 @@ async function openRoom(page: Page, settings = {}) {
 /** Waits until the screen change (View Transition) has finished.
  *  Playwright's Windows WebKit crashes on DOM changes during one; real Safari does not need this. */
 async function settled(page: Page) {
+  // Two frames first: the transition starts a frame after the click.
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
   await page.waitForFunction(() => !document.getAnimations().some((a) => (a.effect as KeyframeEffect | null)?.pseudoElement?.includes('view-transition')))
 }
 
@@ -98,11 +100,11 @@ test('add, rename and delete with undo', async ({ page }) => {
   await input.fill('Fenster putzen')
   await input.press('Enter')
   await expect(bubble(page, 'Fenster putzen')).toBeVisible()
-  await page.getByRole('button', { name: 'Fenster putzen', exact: true }).click()
+  await page.getByRole('button', { name: '„Fenster putzen“ bearbeiten' }).click()
   await page.getByRole('textbox', { name: 'Name der Aufgabe' }).fill('Fenster richtig putzen')
   await page.getByRole('button', { name: 'Fertig', exact: true }).click()
   await expect(bubble(page, 'Fenster richtig putzen')).toBeVisible()
-  await page.getByRole('button', { name: 'Fenster richtig putzen', exact: true }).click()
+  await page.getByRole('button', { name: '„Fenster richtig putzen“ bearbeiten' }).click()
   await page.getByRole('button', { name: 'Löschen', exact: true }).click()
   await expect(bubble(page, 'Fenster richtig putzen')).toHaveCount(0)
   await page.getByRole('button', { name: 'Rückgängig' }).click()
@@ -181,4 +183,49 @@ test('the Gemini key never ends up in a backup', async ({ page }) => {
   await openRoom(page)
   const backup = await page.evaluate(() => localStorage.getItem('checko:v1'))
   expect(backup).not.toContain('test-key-checko')
+})
+
+// Playwright's WebKit has no <input switch>, so the iPhone tick overlay never runs there.
+// This forces that code path in Chromium: a label over every tappable thing, echoing taps onto a switch.
+test.describe('iPhone tick overlay', () => {
+  test.beforeEach(async ({ page }, info) => {
+    test.skip(info.project.name !== 'desktop', 'forced in Chromium only')
+    await page.addInitScript(() => {
+      Object.defineProperty(HTMLInputElement.prototype, 'switch', { value: false, writable: true, configurable: true })
+      Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 5 })
+    })
+  })
+
+  test('a quick tap pumps instead of completing, holding still completes', async ({ page }) => {
+    await openRoom(page)
+    await expect(page.locator('.ios-tick').first()).toBeAttached()
+    const b = bubble(page, 'Bett machen')
+    await b.click()
+    await expect(b.locator('.tooth.lit')).toHaveCount(2)
+    await expect(b).toHaveAttribute('aria-checked', 'false')
+    await hold(page, bubble(page, 'Lüften'), 1250)
+    await page.waitForTimeout(300)
+    await expect(bubble(page, 'Lüften')).toHaveAttribute('aria-checked', 'true')
+  })
+
+  test('tap mode: one tap completes and stays done', async ({ page }) => {
+    await openRoom(page, { mode: 'tap' })
+    await bubble(page, 'Lüften').click()
+    await page.waitForTimeout(300)
+    await expect(bubble(page, 'Lüften')).toHaveAttribute('aria-checked', 'true')
+  })
+
+  test('buttons under the overlay still work', async ({ page }) => {
+    await openRoom(page)
+    const input = page.getByRole('textbox', { name: 'Neue Aufgabe' })
+    await input.fill('Fenster putzen')
+    // force: click the spot, so the overlay label on top gets the tap, as on a phone
+    await page.getByRole('button', { name: 'Hinzufügen' }).click({ force: true })
+    await expect(bubble(page, 'Fenster putzen')).toBeVisible()
+    await page.getByRole('button', { name: 'Zurück zu den Listen' }).click()
+    await expect(page.getByRole('heading', { name: 'Checko' })).toBeVisible()
+    await settled(page)
+    await page.getByRole('button', { name: 'Einstellungen' }).click({ force: true })
+    await expect(page.getByRole('heading', { name: 'Einstellungen' })).toBeVisible()
+  })
 })

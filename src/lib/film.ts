@@ -32,7 +32,7 @@ type RGB = [number, number, number]
 const hex = (h: string): RGB => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)) as RGB
 
 const LIGHT = { base: hex('#EEF1F7'), bands: ['#F6D79A', '#F0A7CB', '#B5AAF0', '#94D9D5', '#E3E9F3'].map(hex), amount: 0.9 }
-const DARK = { base: hex('#0C0E1C'), bands: ['#6E4A10', '#6A1A47', '#2E2780', '#0B5552', '#8C83C9'].map(hex), amount: 0.75 }
+const DARK = { base: hex('#0C0E1C'), bands: ['#6E4A10', '#6A1A47', '#2E2780', '#0B5552', '#373556'].map(hex), amount: 0.75 }
 
 function bandColor(t: number, bands: RGB[]): RGB {
   const x = (((t % 1) + 1) % 1) * bands.length

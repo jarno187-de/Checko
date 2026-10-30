@@ -143,3 +143,13 @@ describe('parse (trust boundary)', () => {
     expect(out.settings.glass).toBe('getoent')
   })
 })
+
+it('a clock that went backwards still completes tasks, and bad dates are rejected', () => {
+  const { d, list, tasks } = room()
+  newRound(d, list.id, 60 * MIN)
+  complete(d, tasks[0].id, 1 * MIN) // device clock is behind the round start
+  expect(isDone(d, tasks[0])).toBe(true)
+  const raw = JSON.parse(JSON.stringify(d))
+  raw.lists[0].roundStart = 'x'
+  expect(parse(JSON.stringify(raw))!.lists).toHaveLength(0)
+})

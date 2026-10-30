@@ -26,7 +26,7 @@
 </script>
 
 <header>
-  <h1 class="wordmark">Checko</h1>
+  <h1 class="wordmark" tabindex="-1">Checko</h1>
   <div class="tick-wrap" use:iosTick>
     <button class="circle glass lens-circle" aria-label="Einstellungen" onclick={() => go('settings')}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h9M17 8h3M4 16h3M11 16h9" /><circle cx="15" cy="8" r="2" /><circle cx="9" cy="16" r="2" /></svg>
@@ -86,7 +86,7 @@
   >
     <!-- svelte-ignore a11y_autofocus -->
     <input type="text" bind:value={name} placeholder="Wie heißt die Liste?" aria-label="Name der Liste" maxlength="120" enterkeyhint="done" autofocus />
-    <button class="pill glass" disabled={!name.trim()}>Liste anlegen</button>
+    <button class="pill faux" disabled={!name.trim()}>Liste anlegen</button>
   </form>
   <p class="secondary">Oder nimm eine Vorlage:</p>
   <div class="chips">

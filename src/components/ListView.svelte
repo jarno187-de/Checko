@@ -36,6 +36,8 @@
   const total = $derived(tasks.length)
   const openCount = $derived(tasks.filter((t) => !done.has(t.id)).length)
   const finished = $derived(total > 0 && openCount === 0)
+  /** Message for a list that was already finished when it was opened (chosen once, not on every render). */
+  const doneMessage = $derived(list ? finishMessage(list.title, list.kind) : '')
 
   // Just-popped tasks stay in place until the hand rests for 2 s, so targets never move mid-chain.
   let recent = $state<Set<string>>(new Set())
@@ -125,11 +127,20 @@
     const onScroll = () => (scrolled = scrollY > 8)
     const vv = visualViewport
     const fit = () => vv && (keyboard = Math.max(0, innerHeight - vv.height - vv.offsetTop))
+    // Popped rows only move into "Erledigt" while no finger is down.
+    const hold = () => clearTimeout(settleTimer)
+    const rest = () => recent.size && settleSoon()
     addEventListener('scroll', onScroll, { passive: true })
     vv?.addEventListener('resize', fit)
     vv?.addEventListener('scroll', fit)
+    addEventListener('pointerdown', hold, true)
+    addEventListener('pointerup', rest, true)
+    addEventListener('pointercancel', rest, true)
     return () => {
       removeEventListener('scroll', onScroll)
+      removeEventListener('pointerdown', hold, true)
+      removeEventListener('pointerup', rest, true)
+      removeEventListener('pointercancel', rest, true)
       vv?.removeEventListener('resize', fit)
       vv?.removeEventListener('scroll', fit)
       timers.forEach(clearTimeout)
@@ -190,13 +201,20 @@
     )
   }
 
+  /** The list is no longer finished: drop the card and any finale still scheduled. */
+  function stopFinale() {
+    timers.forEach(clearTimeout)
+    timers = []
+    result = null
+    glint = false
+  }
+
   function unchecked(task: Task) {
     uncomplete(app.data, task.id, Date.now())
     save()
     sound.unpop(note(1))
     buzz(PATTERNS.uncheck)
-    result = null
-    glint = false
+    stopFinale()
   }
 
   function add(e: SubmitEvent) {
@@ -204,7 +222,7 @@
     if (!addTask(app.data, listId, draft, Date.now())) return
     save()
     draft = ''
-    result = null
+    stopFinale()
     sound.unlockAudio()
     sound.blub()
     buzz(PATTERNS.add)
@@ -242,8 +260,7 @@
   function startRound() {
     newRound(app.data, listId, Date.now())
     save()
-    result = null
-    glint = false
+    stopFinale()
     showDone = true
     menu = false
   }
@@ -260,14 +277,15 @@
 
   function grip(task: Task, e: PointerEvent) {
     e.preventDefault()
-    const el = e.currentTarget as HTMLElement
-    el.setPointerCapture(e.pointerId)
+    const pointer = e.pointerId
+    ;(e.currentTarget as HTMLElement).setPointerCapture(pointer)
     drag = { id: task.id, y0: e.clientY, dy: 0 }
     sound.unlockAudio()
     sound.lift()
     buzz(PATTERNS.pickup)
+    // On window: moving the dragged row in the DOM drops its pointer capture.
     const move = (ev: PointerEvent) => {
-      if (!drag) return
+      if (ev.pointerId !== pointer || !drag) return
       drag.dy = ev.clientY - drag.y0
       const rows = [...document.querySelectorAll<HTMLElement>('.open [data-row]')]
       const i = rows.findIndex((r) => r.dataset.row === drag!.id)
@@ -286,21 +304,33 @@
       sound.slot()
       buzz(PATTERNS.slot)
     }
-    const up = () => {
-      el.removeEventListener('pointermove', move)
-      el.removeEventListener('pointerup', up)
-      el.removeEventListener('pointercancel', up)
+    const up = (ev: PointerEvent) => {
+      if (ev.pointerId !== pointer) return
+      removeEventListener('pointermove', move)
+      removeEventListener('pointerup', up)
+      removeEventListener('pointercancel', up)
       drag = null
       save()
       sound.tock()
       buzz(PATTERNS.drop)
     }
-    el.addEventListener('pointermove', move)
-    el.addEventListener('pointerup', up)
-    el.addEventListener('pointercancel', up)
+    addEventListener('pointermove', move)
+    addEventListener('pointerup', up)
+    addEventListener('pointercancel', up)
   }
 
-  const flipFor = (id: string) => ({ duration: drag?.id === id ? 0 : 220 })
+  /** Arrow keys on the grip move a task one place up or down among the open ones. */
+  function nudge(task: Task, dir: -1 | 1) {
+    const i = upper.findIndex((t) => t.id === task.id)
+    const neighbour = upper[i + dir]
+    if (!neighbour || done.has(neighbour.id)) return
+    moveTask(app.data, task.id, tasks.findIndex((t) => t.id === neighbour.id))
+    save()
+    sound.slot()
+  }
+
+  const flipFor = (id: string) => ({ duration: reduced() || drag?.id === id ? 0 : 220 })
+  const showCard = $derived(!!result || (finished && !recent.size))
 </script>
 
 {#if list}
@@ -323,7 +353,7 @@
   </header>
 
   <section class="head" bind:this={header}>
-    <h1 class="title" style:view-transition-name="list-{list.id}">{list.title}</h1>
+    <h1 class="title" tabindex="-1" style:view-transition-name="list-{list.id}">{list.title}</h1>
     {#if total}
       <div class="strip" aria-hidden="true">
         {#each tasks.slice(0, 12) as t (t.id)}
@@ -340,13 +370,13 @@
     {/if}
   </section>
 
-  {#if result || (finished && !recent.size)}
+  {#if showCard}
     <section class="finale glass" style:view-transition-name="finale">
-      <p class="finish">{result?.message ?? finishMessage(list.title, list.kind)}</p>
+      <p class="finish">{result?.message ?? doneMessage}</p>
       {#each result?.lines ?? [`${total} ${total === 1 ? 'Aufgabe' : 'Aufgaben'} erledigt.`] as line (line)}
         <p>{line}</p>
       {/each}
-      <button class="pill glass" onclick={() => ((menuMode = 'round'), (menu = true))}>Neue Runde starten</button>
+      <button class="pill faux" onclick={() => ((menuMode = 'round'), (menu = true))}>Neue Runde starten</button>
       <button class="text-button" onclick={() => go('overview')}>Zurück zu den Listen</button>
     </section>
   {/if}
@@ -354,7 +384,7 @@
   {#if upper.length}
     <div class="open faux sheet" class:glint>
       {#each upper as t (t.id)}
-        <div animate:flip={flipFor(t.id)} in:receive={{ key: t.id }} out:send={{ key: t.id }}>
+        <div animate:flip={flipFor(t.id)} in:receive={{ key: t.id, duration: reduced() ? 0 : 420 }} out:send={{ key: t.id, duration: reduced() ? 0 : 420 }}>
           <TaskRow
             task={t}
             done={done.has(t.id)}
@@ -367,6 +397,7 @@
             onuncheck={() => unchecked(t)}
             onedit={() => openEdit(t)}
             ongrip={(e) => grip(t, e)}
+            onnudge={(dir) => nudge(t, dir)}
           />
         </div>
       {/each}
@@ -384,7 +415,7 @@
     {#if showDone}
       <div class="faux sheet" class:glint>
         {#each lower as t (t.id)}
-          <div animate:flip={{ duration: 420 }} in:receive={{ key: t.id }} out:send={{ key: t.id }}>
+          <div animate:flip={{ duration: reduced() ? 0 : 420 }} in:receive={{ key: t.id, duration: reduced() ? 0 : 420 }} out:send={{ key: t.id, duration: reduced() ? 0 : 420 }}>
             <TaskRow task={t} done onpop={() => {}} onuncheck={() => unchecked(t)} onedit={() => openEdit(t)} />
           </div>
         {/each}
@@ -392,7 +423,7 @@
     {/if}
   {/if}
 
-  <form class="composer glass" onsubmit={add} style:bottom="calc(max(16px, env(safe-area-inset-bottom)) + {keyboard}px)">
+  <form class="composer glass" hidden={showCard} onsubmit={add} style:bottom="calc(max(16px, env(safe-area-inset-bottom)) + {keyboard}px)">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
     <input bind:this={input} type="text" bind:value={draft} placeholder="Was steht an?" aria-label="Neue Aufgabe" maxlength="120" enterkeyhint="enter" />
     {#if draft.trim()}
@@ -430,7 +461,7 @@
       {/if}
       <div class="actions">
         <button type="button" class="text-button danger" onclick={deleteTask}>Löschen</button>
-        <button class="pill glass">Fertig</button>
+        <button class="pill faux">Fertig</button>
       </div>
     </form>
   </Sheet>
@@ -442,7 +473,7 @@
       <h2 class="title-2">{list.title}</h2>
       <div class="menu">
         <button class="menu-item" onclick={() => (menuMode = 'rename')}>Umbenennen</button>
-        <button class="menu-item" onclick={() => (menuMode = 'round')}>Neue Runde starten</button>
+        {#if total}<button class="menu-item" onclick={() => (menuMode = 'round')}>Neue Runde starten</button>{/if}
         <button class="menu-item danger" onclick={() => (menuMode = 'delete')}>Liste löschen</button>
       </div>
     {:else if menuMode === 'rename'}
@@ -456,19 +487,19 @@
         }}
       >
         <input type="text" bind:value={listTitle} aria-label="Name der Liste" maxlength="120" enterkeyhint="done" />
-        <button class="pill glass" disabled={!listTitle.trim()}>Umbenennen</button>
+        <button class="pill faux" disabled={!listTitle.trim()}>Umbenennen</button>
       </form>
     {:else if menuMode === 'round'}
-      <h2 class="title-2">Neue Runde? Alle {total} Aufgaben sind dann wieder offen.</h2>
+      <h2 class="title-2">Neue Runde? {total === 1 ? 'Die Aufgabe ist' : `Alle ${total} Aufgaben sind`} dann wieder offen.</h2>
       <div class="actions">
         <button class="text-button" onclick={() => (menu = false)}>Abbrechen</button>
-        <button class="pill glass" onclick={startRound}>Neue Runde starten</button>
+        <button class="pill faux" onclick={startRound}>Neue Runde starten</button>
       </div>
     {:else}
       <h2 class="title-2">„{list.title}“ löschen? Die Liste und ihre Bestzeit sind dann weg.</h2>
       <div class="actions">
         <button class="text-button" onclick={() => (menu = false)}>Behalten</button>
-        <button class="pill glass danger" onclick={deleteList}>Liste löschen</button>
+        <button class="pill faux danger" onclick={deleteList}>Liste löschen</button>
       </div>
     {/if}
   </Sheet>

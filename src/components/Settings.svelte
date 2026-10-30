@@ -18,8 +18,10 @@
   async function load(e: Event) {
     const f = (e.currentTarget as HTMLInputElement).files?.[0]
     if (!f) return
-    if (await importBackup(f)) toast(`Sicherung geladen: ${app.data.lists.length} ${app.data.lists.length === 1 ? 'Liste' : 'Listen'}.`)
-    else {
+    if (await importBackup(f)) {
+      // A failed save already shows its own message; don't cover it with a success toast.
+      if (!app.saveFailed) toast(`Sicherung geladen: ${app.data.lists.length} ${app.data.lists.length === 1 ? 'Liste' : 'Listen'}.`)
+    } else {
       sound.error()
       toast('Das ist keine Checko-Sicherung. Wähl die .json-Datei, die Checko gespeichert hat.')
     }
@@ -31,7 +33,7 @@
   <button class="circle glass" aria-label="Zurück zu den Listen" onclick={() => go('overview')}>
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5" /></svg>
   </button>
-  <h1 class="title-2">Einstellungen</h1>
+  <h1 class="title-2" tabindex="-1">Einstellungen</h1>
 </header>
 
 <h2 class="title-2 group">Gefühl</h2>
@@ -78,7 +80,7 @@
       Weniger Bewegung
       <span class="small">Keine Blasen, kein Wackeln. Klang und Vibration bleiben.</span>
     </span>
-    <input type="checkbox" switch checked={reduced()} onchange={(e) => set('motion', e.currentTarget.checked ? 'reduced' : 'system')} />
+    <input type="checkbox" switch checked={reduced()} onchange={(e) => set('motion', e.currentTarget.checked ? 'reduced' : 'full')} />
   </label>
 </div>
 
@@ -94,7 +96,7 @@
   {:else}
     <form class="item column" onsubmit={(e) => { e.preventDefault(); saveKey(keyDraft); keyDraft = '' }}>
       <input type="password" bind:value={keyDraft} placeholder="Gemini-API-Schlüssel" aria-label="Gemini-API-Schlüssel" autocomplete="off" spellcheck="false" />
-      <button class="pill glass" disabled={!keyDraft.trim()}>Schlüssel speichern</button>
+      <button class="pill faux" disabled={!keyDraft.trim()}>Schlüssel speichern</button>
       <a class="small" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Schlüssel bei Google AI Studio holen</a>
     </form>
   {/if}
@@ -124,7 +126,7 @@
   <div class="actions">
     <button class="text-button" onclick={() => (confirmWipe = false)}>Abbrechen</button>
     <button
-      class="pill glass danger"
+      class="pill faux danger"
       onclick={() => {
         wipe()
         confirmWipe = false
@@ -192,7 +194,7 @@
     flex: 1;
     display: grid;
     place-items: center;
-    min-height: 40px;
+    min-height: 44px;
     padding: 0 8px;
     border-radius: 9px;
     text-align: center;

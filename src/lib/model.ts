@@ -44,7 +44,8 @@ export interface Settings {
   /** 'hold': hold or pump the bubble. 'tap': one tap completes. */
   mode: 'hold' | 'tap'
   glass: 'klar' | 'getoent' | 'solide'
-  motion: 'system' | 'reduced'
+  /** 'system' follows the OS setting; the other two override it. */
+  motion: 'system' | 'reduced' | 'full'
   /** How often the "Loslassen." hint was shown (stops after 3). */
   hints: number
   /** Photo check with Gemini, for tasks marked with `photo`. Needs an API key (kept outside Data). */
@@ -212,9 +213,16 @@ export interface Finish {
 }
 
 /** Marks a task done. Returns a Finish when this completed the whole list for the first time this round. */
+/** Never stamp an event before its round started (the device clock may have gone backwards). */
+const stamp = (d: Data, listId: ID, now: number) => {
+  const start = Date.parse(d.lists.find((l) => l.id === listId)?.roundStart ?? '')
+  return Number.isFinite(start) ? Math.max(now, start) : now
+}
+
 export function complete(d: Data, taskId: ID, now: number): Finish | undefined {
   const task = d.tasks.find((t) => t.id === taskId)
   if (!task || isDone(d, task)) return
+  now = stamp(d, task.listId, now)
   d.events.push({ id: uuid(), taskId, listId: task.listId, at: iso(now), kind: 'done' })
   d.total++
   const list = d.lists.find((l) => l.id === task.listId)
@@ -233,6 +241,7 @@ export function complete(d: Data, taskId: ID, now: number): Finish | undefined {
 export function uncomplete(d: Data, taskId: ID, now: number) {
   const task = d.tasks.find((t) => t.id === taskId)
   if (!task || !isDone(d, task)) return
+  now = stamp(d, task.listId, now)
   d.events.push({ id: uuid(), taskId, listId: task.listId, at: iso(now), kind: 'undone' })
   d.total = Math.max(0, d.total - 1)
 }
@@ -255,6 +264,7 @@ export function nextCombo(prev: { level: number; at: number }, now: number, wind
 const isStr = (v: unknown, max = 200): v is string => typeof v === 'string' && v.length <= max
 const isId = (v: unknown): v is string => isStr(v, 64) && v.length > 0
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
+const isDate = (v: unknown): v is string => isStr(v, 40) && Number.isFinite(Date.parse(v))
 
 /** Validates untrusted JSON (localStorage or an imported backup). Returns null if it is not Checko data. */
 export function parse(json: string): Data | null {
@@ -268,15 +278,15 @@ export function parse(json: string): Data | null {
   const o = raw as Record<string, unknown>
   if (o.version !== 1 || !Array.isArray(o.lists) || !Array.isArray(o.tasks) || !Array.isArray(o.events)) return null
   const lists = (o.lists as Record<string, unknown>[]).filter(
-    (l) => l && isId(l.id) && isStr(l.title, MAX_TITLE) && isStr(l.createdAt, 40) && isStr(l.roundStart, 40) && isNum(l.order) && isNum(l.rounds),
+    (l) => l && isId(l.id) && isStr(l.title, MAX_TITLE) && isDate(l.createdAt) && isDate(l.roundStart) && isNum(l.order) && isNum(l.rounds),
   )
   const listIds = new Set(lists.map((l) => l.id))
   const tasks = (o.tasks as Record<string, unknown>[]).filter(
-    (t) => t && isId(t.id) && isId(t.listId) && listIds.has(t.listId) && isStr(t.title, MAX_TITLE) && isStr(t.createdAt, 40) && isNum(t.order),
+    (t) => t && isId(t.id) && isId(t.listId) && listIds.has(t.listId) && isStr(t.title, MAX_TITLE) && isDate(t.createdAt) && isNum(t.order),
   )
   const taskIds = new Set(tasks.map((t) => t.id))
   const events = (o.events as Record<string, unknown>[]).filter(
-    (e) => e && isId(e.id) && isId(e.taskId) && taskIds.has(e.taskId) && isId(e.listId) && isStr(e.at, 40) && (e.kind === 'done' || e.kind === 'undone'),
+    (e) => e && isId(e.id) && isId(e.taskId) && taskIds.has(e.taskId) && isId(e.listId) && isDate(e.at) && (e.kind === 'done' || e.kind === 'undone'),
   )
   const s = (o.settings ?? {}) as Record<string, unknown>
   const def = defaultSettings()
@@ -291,7 +301,7 @@ export function parse(json: string): Data | null {
       roundStart: l.roundStart as string,
       rounds: l.rounds as number,
       ...(isStr(l.kind, 20) && TEMPLATES.some((t) => t.kind === l.kind) && { kind: l.kind as Kind }),
-      ...(isStr(l.finishedAt, 40) && { finishedAt: l.finishedAt }),
+      ...(isDate(l.finishedAt) && { finishedAt: l.finishedAt }),
       ...(isNum(l.bestMs) && { bestMs: l.bestMs }),
     })),
     tasks: tasks.map((t) => ({ id: t.id, listId: t.listId, title: t.title, createdAt: t.createdAt, order: t.order, ...(typeof t.photo === 'boolean' && { photo: t.photo }) }) as Task),
@@ -301,7 +311,7 @@ export function parse(json: string): Data | null {
       vibration: typeof s.vibration === 'boolean' ? s.vibration : def.vibration,
       mode: s.mode === 'tap' ? 'tap' : 'hold',
       glass: s.glass === 'klar' || s.glass === 'solide' ? s.glass : 'getoent',
-      motion: s.motion === 'reduced' ? 'reduced' : 'system',
+      motion: s.motion === 'reduced' || s.motion === 'full' ? s.motion : 'system',
       hints: isNum(s.hints) ? s.hints : 0,
       photoCheck: typeof s.photoCheck === 'boolean' ? s.photoCheck : def.photoCheck,
     },

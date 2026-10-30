@@ -46,7 +46,7 @@
     animation: toast-in 0.42s var(--spring-pop);
   }
   .action {
-    min-height: 36px;
+    min-height: 44px;
     padding: 0 14px;
     border-radius: 999px;
     background: color-mix(in oklab, var(--disc-ink) 16%, transparent);

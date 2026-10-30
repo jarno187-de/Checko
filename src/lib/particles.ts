@@ -61,8 +61,8 @@ function ensureCanvas() {
   ctx = canvas.getContext('2d')!
   const fit = () => {
     const dpr = Math.min(devicePixelRatio, 2)
-    canvas!.width = innerWidth * dpr
-    canvas!.height = innerHeight * dpr
+    canvas!.width = canvas!.clientWidth * dpr
+    canvas!.height = canvas!.clientHeight * dpr
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   }
   fit()
@@ -102,7 +102,7 @@ function start() {
 function frame(t: number) {
   const dt = Math.min(0.05, (t - last) / 1000)
   last = t
-  ctx.clearRect(0, 0, innerWidth, innerHeight)
+  ctx.clearRect(0, 0, canvas!.clientWidth, canvas!.clientHeight)
   parts = parts.filter((p) => {
     p.age += dt * 1000
     if (p.age >= p.life) {

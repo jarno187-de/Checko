@@ -37,15 +37,22 @@ export const ui = $state({
 
 /** Change screens; morphs with a View Transition where the browser has one and motion is allowed. */
 export function go(view: View, listId = '') {
+  // Focus moves to the new screen's heading, so keyboard and screen-reader users land there.
+  const focus = () => document.querySelector<HTMLElement>('main h1')?.focus({ preventScroll: true })
   const apply = () => {
     ui.view = view
     ui.listId = listId
     scrollTo(0, 0)
   }
-  if (!document.startViewTransition || reduced()) return apply()
+  if (!document.startViewTransition || reduced()) {
+    apply()
+    tick().then(focus)
+    return
+  }
   document.startViewTransition(async () => {
     apply()
     await tick()
+    focus()
   })
 }
 
@@ -69,7 +76,15 @@ export function bumpCombo(now: number) {
   return app.combo.level
 }
 
-export const reduced = () => app.data.settings.motion === 'reduced' || prefersReducedMotion.current
+export const reduced = () => {
+  const m = app.data.settings.motion
+  return m === 'reduced' || (m === 'system' && prefersReducedMotion.current)
+}
+
+// Another tab or the installed app saved: take its data, so our next save doesn't overwrite it.
+addEventListener('storage', (e) => {
+  if (e.key === KEY && e.newValue) app.data = parse(e.newValue) ?? app.data
+})
 
 let toastTimer = 0
 export function toast(text: string, action?: { label: string; run: () => void }) {

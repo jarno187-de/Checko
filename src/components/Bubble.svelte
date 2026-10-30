@@ -5,7 +5,7 @@
   import { buzz, iosTick, stopBuzz } from '../lib/haptics'
   import { PATTERNS, TEETH, rampPattern } from '../lib/schedule'
   import * as sound from '../lib/sound'
-  import { app, save } from '../lib/store.svelte'
+  import { app, reduced, save } from '../lib/store.svelte'
 
   interface Props {
     done: boolean
@@ -72,6 +72,7 @@
   const run = () => (raf ||= requestAnimationFrame(loop))
 
   function bump() {
+    if (reduced()) return
     core?.animate([{ transform: 'scale(1.025)' }, { transform: 'scale(1)' }], { duration: 110, easing: 'ease-out' })
   }
 
@@ -102,8 +103,8 @@
     const r = charger.up(t)
     holding = false
     hint = false
+    sound.hush(rampBus) // ticks and the klack still scheduled must not play after the pop
     if (r === 'pop') return pop('hold')
-    sound.hush(rampBus)
     if (r === 'pump') {
       sound.pump(charger.level(t) - 1)
       buzz(PATTERNS.pump)
@@ -180,6 +181,7 @@
   }
 
   function onclickcapture(e: MouseEvent) {
+    if (e.target instanceof HTMLInputElement) return // iosTick's label echoing the tap onto its switch
     const g = gesture
     gesture = 'none'
     if (g === 'charge') {
