@@ -207,7 +207,7 @@
     background: var(--row);
     box-shadow: var(--rim), 0 2px 6px -2px #15172633;
   }
-  .segmented label:has(:focus-visible) {
+  :global(:root[data-kbd]) .segmented label:has(:focus-visible) {
     outline: 2px solid var(--ink);
   }
   .segmented input {

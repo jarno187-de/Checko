@@ -2,12 +2,16 @@
   // The room behind the glass: a soap film that brightens as tasks get done.
   // A sibling of the app, never an ancestor of glass (that would empty every blur).
   import { filmUrl } from '../lib/film'
+  import { startFlow, stir } from '../lib/flow'
   import { reduced, ui } from '../lib/store.svelte'
 
   let url = $state('')
   let flash = $state<HTMLElement>()
+  let canvas = $state<HTMLCanvasElement>()
+  let live = $state(false)
   const dark = matchMedia('(prefers-color-scheme: dark)')
 
+  // The still image: fallback without WebGL, and the page background under the status bar and keyboard.
   $effect(() => {
     const load = () =>
       filmUrl(dark.matches).then((u) => {
@@ -19,21 +23,43 @@
     return () => dark.removeEventListener('change', load)
   })
 
-  // Rinse ("Spülgang") when a list is finished: the film swirls on and a bright wash passes over.
+  let flow: ReturnType<typeof startFlow> = null
+  $effect(() => {
+    if (!canvas) return
+    flow = startFlow(canvas, { dark: () => dark.matches, angle: () => ui.scene.angle, still: reduced })
+    live = !!flow
+    const redraw = () => flow?.run()
+    dark.addEventListener('change', redraw)
+    return () => {
+      flow?.stop()
+      dark.removeEventListener('change', redraw)
+    }
+  })
+  // Weniger Bewegung switched on or off, or a new list: restart or redraw the still frame.
+  $effect(() => {
+    reduced()
+    void ui.scene.angle
+    flow?.run()
+  })
+
+  // Rinse ("Spülgang") when a list is finished: the film surges and a bright wash passes over.
   let rinsed = 0
   $effect(() => {
     if (ui.scene.rinse === rinsed) return
     rinsed = ui.scene.rinse
     if (reduced()) return
-    ui.scene.angle += 40
+    stir(1.5)
     flash?.animate([{ opacity: 0 }, { opacity: 0.12 }, { opacity: 0 }], { duration: 1200, easing: 'ease-in-out' })
   })
 </script>
 
 <div class="backdrop" aria-hidden="true">
-  <div class="spin">
-    <div class="film" style:rotate="{ui.scene.angle}deg" style:background-image={url ? `url(${url})` : undefined}></div>
-  </div>
+  <canvas class="flow" bind:this={canvas}></canvas>
+  {#if !live}
+    <div class="spin">
+      <div class="film" style:rotate="{ui.scene.angle}deg" style:background-image={url ? `url(${url})` : undefined}></div>
+    </div>
+  {/if}
   <div class="wash" style:opacity={ui.scene.wash}></div>
   <div class="flash" bind:this={flash}></div>
 </div>
@@ -48,6 +74,12 @@
     overflow: hidden;
     background: var(--bg);
   }
+  .flow {
+    position: absolute;
+    inset: 0 0 auto;
+    width: 100%;
+    height: 130lvh;
+  }
   .spin {
     position: absolute;
     left: 50%;
@@ -56,7 +88,6 @@
     width: 150vmax;
     height: 150vmax;
     translate: -50% -50%;
-    animation: spin 900s linear infinite;
   }
   .film {
     position: absolute;
@@ -81,13 +112,5 @@
   .flash {
     background: #fff;
     opacity: 0;
-  }
-  @keyframes spin {
-    to {
-      rotate: 360deg;
-    }
-  }
-  :global(:root[data-reduced]) .spin {
-    animation: none;
   }
 </style>

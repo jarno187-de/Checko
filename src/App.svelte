@@ -25,6 +25,20 @@
     }
   })
 
+  // Focus rings belong to keyboard navigation only: on with Tab, off with the next touch or click.
+  $effect(() => {
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Tab') root.dataset.kbd = ''
+    }
+    const pointer = () => delete root.dataset.kbd
+    addEventListener('keydown', key, true)
+    addEventListener('pointerdown', pointer, true)
+    return () => {
+      removeEventListener('keydown', key, true)
+      removeEventListener('pointerdown', pointer, true)
+    }
+  })
+
   $effect(() => {
     root.dataset.glass = app.data.settings.glass
     if (reduced()) root.dataset.reduced = ''

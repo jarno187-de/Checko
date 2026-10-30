@@ -134,10 +134,15 @@ button {
   -webkit-user-select: none;
 }
 
+/* Focus rings only while someone actually moves with the Tab key (data-kbd, set in App.svelte).
+   Taps and sheets that focus their first button show nothing. */
+:focus,
 :focus-visible {
+  outline: none;
+}
+:root[data-kbd] :focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--bg);
 }
 
 .wordmark {

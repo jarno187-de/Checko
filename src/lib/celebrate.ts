@@ -1,5 +1,6 @@
 // What happens around a popped bubble: sound, vibration, flying bubbles, and the finale texts.
 import { buzz } from './haptics'
+import { stir } from './flow'
 import { float, spray } from './particles'
 import { PATTERNS, burstPattern, finalePattern, note } from './schedule'
 import * as sound from './sound'
@@ -20,6 +21,7 @@ export function popEffects(el: Element, how: 'hold' | 'tap', combo: number, fina
     sound.finale(f, finaleRows)
   } else buzz(how === 'tap' ? PATTERNS.tapCheck : burstPattern(combo))
   if (reduced()) return
+  stir(finaleRows ? 0.4 : 0.5 + 0.1 * combo)
   const [x, y] = center(el)
   spray(x, y, how === 'tap' ? 6 : Math.min(18, 10 + 2 * (combo - 1)))
 }

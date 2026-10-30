@@ -5,6 +5,7 @@
   import { crossfade, fly } from 'svelte/transition'
   import { afterglow, finishLines, finishMessage, popEffects } from '../lib/celebrate'
   import { angleFor } from '../lib/film'
+  import { stir } from '../lib/flow'
   import { GeminiError, PROBLEM_TEXT, checkPhoto, gemini } from '../lib/gemini.svelte'
   import { buzz, iosTick } from '../lib/haptics'
   import {
@@ -64,7 +65,6 @@
   let listTitle = $state('')
   let draft = $state('')
   let input = $state<HTMLInputElement>()
-  let scrolled = $state(false)
 
   // Photo check: a task marked for it stays locked until Gemini says the photo shows it done.
   let camera = $state<HTMLInputElement>()
@@ -122,16 +122,13 @@
     ui.scene.wash = total ? (0.35 * (total - openCount)) / total : 0
   })
   $effect(() => {
-    const onScroll = () => (scrolled = scrollY > 8)
     // Popped rows only move into "Erledigt" while no finger is down.
     const hold = () => clearTimeout(settleTimer)
     const rest = () => recent.size && settleSoon()
-    addEventListener('scroll', onScroll, { passive: true })
     addEventListener('pointerdown', hold, true)
     addEventListener('pointerup', rest, true)
     addEventListener('pointercancel', rest, true)
     return () => {
-      removeEventListener('scroll', onScroll)
       removeEventListener('pointerdown', hold, true)
       removeEventListener('pointerup', rest, true)
       removeEventListener('pointercancel', rest, true)
@@ -218,6 +215,7 @@
     sound.unlockAudio()
     sound.blub()
     buzz(PATTERNS.add)
+    stir(0.3)
     input?.focus()
   }
 
@@ -326,13 +324,12 @@
 </script>
 
 {#if list}
-  <header class:glass={scrolled}>
-    <button class="circle" class:glass={!scrolled} aria-label="Zurück zu den Listen" onclick={() => go('overview')}>
+  <header>
+    <button class="circle glass" aria-label="Zurück zu den Listen" onclick={() => go('overview')}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5" /></svg>
     </button>
     <button
-      class="circle"
-      class:glass={!scrolled}
+      class="circle glass"
       aria-label="Mehr"
       onclick={() => {
         menuMode = 'menu'
@@ -506,10 +503,11 @@
     justify-content: space-between;
     margin: 0 calc(-1 * var(--gutter));
     padding: max(8px, env(safe-area-inset-top)) var(--gutter) 8px;
-    transition: background 0.2s;
+    /* No bar: only the two glass buttons float, rows stay tappable between them. */
+    pointer-events: none;
   }
-  header:not(.glass) {
-    background: transparent;
+  header button {
+    pointer-events: auto;
   }
   header svg {
     width: 24px;
