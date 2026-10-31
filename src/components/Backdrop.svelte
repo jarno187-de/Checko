@@ -11,13 +11,9 @@
   let live = $state(false)
   const dark = matchMedia('(prefers-color-scheme: dark)')
 
-  // The still image: fallback without WebGL, and the page background under the status bar and keyboard.
+  // The still image: fallback without WebGL.
   $effect(() => {
-    const load = () =>
-      filmUrl(dark.matches).then((u) => {
-        url = u
-        document.documentElement.style.backgroundImage = `url(${u})`
-      })
+    const load = () => filmUrl(dark.matches).then((u) => (url = u))
     load()
     dark.addEventListener('change', load)
     return () => dark.removeEventListener('change', load)
@@ -75,9 +71,9 @@
   }
   .flow {
     position: absolute;
-    inset: 0 0 auto;
+    inset: 0;
     width: 100%;
-    height: 130lvh;
+    height: 100%;
   }
   .spin {
     position: absolute;

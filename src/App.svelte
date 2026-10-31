@@ -63,6 +63,29 @@
     }
   })
 
+  // iPhone WebKit scrolls the page to centre every tapped text field: the title scrolls away, and the
+  // keyboard then covers the area past the page end, which WebKit paints as one flat colour.
+  // Focusing the field ourselves with preventScroll keeps the page where it is.
+  $effect(() => {
+    let x = 0
+    let y = 0
+    const start = (e: TouchEvent) => ({ clientX: x, clientY: y } = e.touches[0])
+    const end = (e: TouchEvent) => {
+      const t = e.target
+      const p = e.changedTouches[0]
+      if (!(t instanceof HTMLInputElement) || !t.matches('[type=text],[type=password]') || t === document.activeElement) return
+      if (Math.abs(p.clientX - x) > 10 || Math.abs(p.clientY - y) > 10) return // a scroll, not a tap
+      e.preventDefault()
+      t.focus({ preventScroll: true })
+    }
+    addEventListener('touchstart', start, { capture: true, passive: true })
+    addEventListener('touchend', end, { capture: true, passive: false })
+    return () => {
+      removeEventListener('touchstart', start, true)
+      removeEventListener('touchend', end, true)
+    }
+  })
+
   // A list that no longer exists (deleted, or a backup was loaded) falls back to the overview.
   $effect(() => {
     if (ui.view === 'list' && !app.data.lists.some((l) => l.id === ui.listId)) ui.view = 'overview'

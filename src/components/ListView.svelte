@@ -212,7 +212,7 @@
     sound.blub()
     buzz(PATTERNS.add)
     stir(0.3)
-    input?.focus()
+    input?.focus({ preventScroll: true })
   }
 
   function openEdit(task: Task) {
@@ -340,13 +340,7 @@
   <section class="head" bind:this={header}>
     <h1 class="title" tabindex="-1" style:view-transition-name="list-{list.id}">{list.title}</h1>
     {#if total}
-      <div class="strip" aria-hidden="true">
-        {#each tasks.slice(0, 12) as t (t.id)}
-          <span class="dot" class:popped={done.has(t.id)}></span>
-        {/each}
-        {#if total > 12}<span class="more num">+{total - 12}</span>{/if}
-        <span class="count"><b class="num">{openCount}</b> offen</span>
-      </div>
+      <p class="count"><b class="num">{openCount}</b> offen</p>
     {/if}
     {#if chainVisible && chain > 1}
       <div class="chain faux" aria-hidden="true">
@@ -408,7 +402,8 @@
     {/if}
   {/if}
 
-  <form class="composer glass" hidden={showCard} onsubmit={add}>
+  <!-- Hidden under an open sheet: the clear glass would show it through. -->
+  <form class="composer glass" hidden={showCard || menu || editing !== null} onsubmit={add}>
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
     <input bind:this={input} type="text" bind:value={draft} placeholder="Was steht an?" aria-label="Neue Aufgabe" maxlength="120" enterkeyhint="enter" />
     {#if draft.trim()}
@@ -476,15 +471,15 @@
       </form>
     {:else if menuMode === 'round'}
       <h2 class="title-2">Neue Runde? {total === 1 ? 'Die Aufgabe ist' : `Alle ${total} Aufgaben sind`} dann wieder offen.</h2>
-      <div class="actions">
-        <button class="text-button" onclick={() => (menu = false)}>Abbrechen</button>
+      <div class="choices">
         <button class="pill faux" onclick={startRound}>Neue Runde starten</button>
+        <button class="text-button" onclick={() => (menu = false)}>Abbrechen</button>
       </div>
     {:else}
       <h2 class="title-2">„{list.title}“ löschen? Die Liste und ihre Bestzeit sind dann weg.</h2>
-      <div class="actions">
-        <button class="text-button" onclick={() => (menu = false)}>Behalten</button>
+      <div class="choices">
         <button class="pill faux danger" onclick={deleteList}>Liste löschen</button>
+        <button class="text-button" onclick={() => (menu = false)}>Behalten</button>
       </div>
     {/if}
   </Sheet>
@@ -524,45 +519,14 @@
     gap: 10px;
     padding: 4px 0 18px;
   }
-  .strip {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-  }
-  .dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    border: 1.5px solid var(--ink-2);
-    opacity: 0.6;
-    transition:
-      background 0.2s,
-      opacity 0.2s;
-  }
-  .dot.popped {
-    background: var(--silber);
-    border-color: var(--ink-2);
-    opacity: 1;
-    animation: dot-pop 0.42s var(--spring-pop);
-  }
-  @keyframes dot-pop {
-    from {
-      scale: 0;
-    }
-  }
-  .more {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--ink-2);
-  }
   .count {
-    margin-left: auto;
     font-weight: 560;
+    color: var(--ink-2);
   }
   .count b {
     font-size: 1.375rem;
     font-weight: 800;
+    color: var(--ink);
   }
   .chain {
     justify-self: end;

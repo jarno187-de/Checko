@@ -21,7 +21,9 @@ vec3 band(float x){x=fract(x)*5.;float i=floor(x);float f=x-i;f=f*f*(3.-2.*f);
   return mix(a,b,f);}
 void main(){
   // Time is a third noise dimension: the puddles reshape where they are, nothing slides or turns.
-  vec2 p=(gl_FragCoord.xy-.5*size)/max(size.x,size.y)*1.5+vec2(1.1,1.3);
+  // The canvas is two screens tall (behind the keyboard too); the pattern is laid out for the top one.
+  float u=size.y/200.;
+  vec2 p=(gl_FragCoord.xy-vec2(.5*size.x,size.y-65.*u))/max(size.x,130.*u)*1.5+vec2(1.1,1.3);
   vec2 q=vec2(fbm(p,t),fbm(p+vec2(5.2,1.3),t+3.1));
   float r=fbm(p+warp*q+vec2(1.7,9.2),t*.7+7.4);
   vec3 col=band(r*2.4+q.x*.8);
@@ -42,6 +44,9 @@ export function stir(amount: number) {
 export function startFlow(canvas: HTMLCanvasElement, opts: { dark: () => boolean; still: () => boolean }) {
   const gl = canvas.getContext('webgl', { antialias: false, alpha: false, preserveDrawingBuffer: false })
   if (!gl) return null
+  // WebGL emulated on the CPU (no GPU, e.g. SwiftShader or llvmpipe) would eat the main thread: keep the still film.
+  const info = gl.getExtension('WEBGL_debug_renderer_info')
+  if (info && /swiftshader|llvmpipe|software/i.test(gl.getParameter(info.UNMASKED_RENDERER_WEBGL))) return null
   const shader = (type: number, src: string) => {
     const s = gl.createShader(type)!
     gl.shaderSource(s, src)
@@ -67,10 +72,10 @@ export function startFlow(canvas: HTMLCanvasElement, opts: { dark: () => boolean
     gl.uniform1f(u('amount'), p.amount)
   }
 
-  // The film is soft, so a quarter of the pixels is plenty and saves battery.
+  // The film is soft: one pixel per 5 CSS pixels matches the old still image and spares the GPU (and battery).
   const fit = () => {
-    canvas.width = Math.max(1, Math.round(canvas.clientWidth / 3))
-    canvas.height = Math.max(1, Math.round(canvas.clientHeight / 3))
+    canvas.width = Math.max(1, Math.round(canvas.clientWidth / 5))
+    canvas.height = Math.max(1, Math.round(canvas.clientHeight / 5))
     gl.viewport(0, 0, canvas.width, canvas.height)
     gl.uniform2f(u('size'), canvas.width, canvas.height)
   }

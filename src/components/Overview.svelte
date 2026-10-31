@@ -68,7 +68,7 @@
 {/if}
 
 <div class="dock">
-  <div class="tick-wrap" use:iosTick>
+  <div class="tick-wrap" use:iosTick hidden={creating}>
     <button class="pill glass lens-pill new" onclick={() => (creating = true)}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
       Neue Liste
@@ -84,8 +84,15 @@
       if (name.trim()) create(name)
     }}
   >
-    <!-- svelte-ignore a11y_autofocus -->
-    <input type="text" bind:value={name} placeholder="Wie heißt die Liste?" aria-label="Name der Liste" maxlength="120" enterkeyhint="done" autofocus />
+    <input
+      type="text"
+      bind:value={name}
+      placeholder="Wie heißt die Liste?"
+      aria-label="Name der Liste"
+      maxlength="120"
+      enterkeyhint="done"
+      {@attach (el) => el.focus({ preventScroll: true })}
+    />
     <button class="pill faux" disabled={!name.trim()}>Liste anlegen</button>
   </form>
   <p class="secondary">Oder nimm eine Vorlage:</p>

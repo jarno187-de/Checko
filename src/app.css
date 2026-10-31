@@ -96,14 +96,24 @@ html {
   font-weight: 450;
   line-height: 1.45;
   color: var(--ink);
-  /* The film again (image set by Backdrop.svelte): iOS paints this under the status bar
-     and behind the keyboard, where the fixed backdrop does not reach. */
-  background: var(--bg) center / 150vmax 150vmax no-repeat fixed;
+  /* Past the end of the page (bottom of a long list with the keyboard open) iOS paints only this
+     one colour, never an image: a mid film tone instead of the plain base. */
+  background: #e6e2f0;
   -webkit-tap-highlight-color: transparent;
+}
+@media (prefers-color-scheme: dark) {
+  html {
+    background: #18173a;
+  }
 }
 
 * {
   box-sizing: border-box;
+}
+
+/* Components set their own display; hidden must still win. */
+[hidden] {
+  display: none !important;
 }
 
 body {
@@ -250,6 +260,8 @@ button {
   font-weight: 650;
   font-stretch: 104%;
   transition: scale 0.42s var(--spring-pop);
+  /* One line, always: a button that wraps into a tall block looks broken. */
+  white-space: nowrap;
 }
 
 .circle {
@@ -274,6 +286,7 @@ button {
 }
 
 .chip {
+  white-space: nowrap;
   min-height: 44px;
   padding: 0 18px;
   border-radius: 999px;
@@ -281,7 +294,17 @@ button {
   transition: scale 0.42s var(--spring-pop);
 }
 
+/* Confirmations: the main action spans the sheet, the way back sits centred under it. */
+.choices {
+  display: grid;
+  gap: 4px;
+}
+.choices .text-button {
+  justify-self: center;
+}
+
 .text-button {
+  white-space: nowrap;
   min-height: 44px;
   padding: 0 8px;
   font-weight: 600;
@@ -373,6 +396,18 @@ dialog {
 }
 dialog::backdrop {
   background: #0c0e1c47;
+  transition: opacity 0.22s;
+}
+dialog[open]::backdrop {
+  animation: dim-in 0.3s ease-out;
+}
+dialog.closing::backdrop {
+  opacity: 0;
+}
+@keyframes dim-in {
+  from {
+    opacity: 0;
+  }
 }
 dialog[open] {
   animation: sheet-in 0.5s var(--spring-soft);

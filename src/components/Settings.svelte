@@ -57,10 +57,10 @@
   <fieldset class="item column">
     <legend class="what">Abhaken</legend>
     <div class="segmented">
-      <label><input type="radio" name="mode" checked={s.mode === 'hold'} onchange={() => set('mode', 'hold')} />Halten oder Pumpen</label>
+      <label><input type="radio" name="mode" checked={s.mode === 'hold'} onchange={() => set('mode', 'hold')} />Halten</label>
       <label><input type="radio" name="mode" checked={s.mode === 'tap'} onchange={() => set('mode', 'tap')} />Antippen</label>
     </div>
-    <span class="small">Antippen geht schneller. Halten macht mehr Plopp.</span>
+    <span class="small">Halten lädt die Blase auf, schnelles Pumpen geht auch. Antippen ist sofort erledigt.</span>
   </fieldset>
 </div>
 
@@ -123,8 +123,7 @@
 
 <Sheet bind:open={confirmWipe} label="Alles löschen">
   <h2 class="title-2">Alle Listen und Zahlen löschen? Das lässt sich nicht rückgängig machen.</h2>
-  <div class="actions">
-    <button class="text-button" onclick={() => (confirmWipe = false)}>Abbrechen</button>
+  <div class="choices">
     <button
       class="pill faux danger"
       onclick={() => {
@@ -133,6 +132,7 @@
         go('overview')
       }}>Alles löschen</button
     >
+    <button class="text-button" onclick={() => (confirmWipe = false)}>Abbrechen</button>
   </div>
 </Sheet>
 
@@ -198,6 +198,7 @@
     padding: 0 8px;
     border-radius: 9px;
     text-align: center;
+    white-space: nowrap;
     font-size: 0.9375rem;
     font-weight: 600;
     cursor: pointer;
@@ -217,11 +218,5 @@
   }
   .footer {
     padding: 20px 4px;
-  }
-  .actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
   }
 </style>
